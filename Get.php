@@ -40,6 +40,7 @@ class Get extends DBconnect
                 unset($result['uid']);
                 unset($result['user_agent']);
                 unset($result['info_client']);
+                unset($result['login']);
                 Jsons::jsonOutput(true, $result);
                 }else{
                     Jsons::jsonOutput(false, 'id','user not found');
