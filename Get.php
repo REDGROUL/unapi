@@ -35,6 +35,11 @@ class Get extends DBconnect
                 $query = mysqli_query($this->connect(), "SELECT * FROM `users` WHERE `id` = '$id'");
                 if(mysqli_num_rows($query) == 1){
                 $result = mysqli_fetch_assoc($query);
+                unset($result['password']);
+                unset($result['token']);
+                unset($result['uid']);
+                unset($result['user_agent']);
+                unset($result['info_client']);
                 Jsons::jsonOutput(true, $result);
                 }else{
                     Jsons::jsonOutput(false, 'id','user not found');
