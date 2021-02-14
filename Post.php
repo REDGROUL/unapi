@@ -58,7 +58,6 @@ class Post extends DBconnect
     {
         $login = $_POST['login'];
         $pass = $_POST['password'];
-        $token = Gets::getToken();
         $user_agent = Gets::getUserAgent();
         $info = Gets::InfoClient();
         empty($login) ? $error['login'] = 'empty' : $_POST['login'];
@@ -70,14 +69,21 @@ class Post extends DBconnect
                 $password_hash = $result['password'];
                 $id = $result['id'];
                 if(password_verify($pass,$password_hash)){
-                    $token = md5(time());
-                    mysqli_query($this->connect(), "INSERT INTO `token`(`uid`, `token`, `user_agent`, `info_client`) VALUES ('$id', '$token','$user_agent', '$info')");
-                    mysqli_query($this->connect(), "UPDATE `users` SET `status`= 'online', `last_activity` = '0000-00-00 00:00:00' WHERE `id` = '$id'");
+                    $token = hash("sha256", uniqid('', true));
+                    $result['token'] = $token;
+                   $query = mysqli_query($this->connect(), "INSERT INTO `token`(`uid`, `token`) VALUES ('$id', '$token')");
+                   if($query == true){
+                    //mysqli_query($this->connect(), "UPDATE `users` SET `status`= 'online', `last_activity` = '0000-00-00 00:00:00' WHERE `id` = '$id'");
                     unset($result['password']);
                     unset($result['last_activity']);
                     unset($result['status']);
-                    $result['token'] = $token;
+                   
                     Jsons::jsonOutput(true, $result);
+                   }else{
+                    Jsons::jsonOutput(false, "unauth", "prikol");  
+                   }
+                   
+                   
                 }else{
                     unset($result);
                     Jsons::jsonOutput(false, 'password', 'wrong password');
