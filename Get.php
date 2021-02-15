@@ -5,9 +5,6 @@ class Get extends DBconnect
 
     function getContent($url_data)
     {
-        $method = explode("=", $url_data);
-        
-
         try{
             $this->$url_data();
         }
