@@ -7,22 +7,14 @@ class Get extends DBconnect
     {
         $method = explode("=", $url_data);
         
-        switch ($method[0])
-        {
-            case "getInfo":
-                $this->getInfo($url_data);
-            break;
-            case "getDialogs":
-                $this->getDialogs($url_data);
-            break;
-            case "getMessage":
-                $this->getMessage($url_data);
-            break;
-            case "search":
-                $this->search($url_data);
-            break;
-            
+
+        try{
+            $this->$url_data();
         }
+        catch(Throwable $url_data){
+            Jsons::jsonOutput(false, 'method', 'unknown method called');
+        }
+      
     }
 
 
