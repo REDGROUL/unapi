@@ -2,55 +2,13 @@
 class Post extends DBconnect
 {
     function getContent($url_data)
-    {//вызывать метод из названия 
-        switch($url_data)
-        {
-            case 'login':
-                $this->login();
-            break;
-           case 'register':
-                $this->register();
-            break;
-           case 'loginfound':
-                $this->loginfound();
-            break;
-            case 'setOffline':
-                $this->setOffline();
-            break;
-           case 'logOut':
-                $this->logOut();
-            break;
-            case 'setOnline':
-                $this->setOnline();
-            break;
-            case 'cleanHistorySessions':
-                $this->cleanHistorySessions();
-            break;
-            case 'sendMessage':
-               $this->sendMessage();
-            break; 
-            case 'uploadFile':
-                $this->uploadFile();
-            break; 
-            case 'logOutOther':
-                $this->logOutOther();
-            break;
-            case 'changeLogin':
-                $this->changeLogin();
-            break;
-            case 'changePass':
-                $this->changePass();
-            break;
-            case 'changeNick':
-                $this->changeNick();
-            break;
-            case 'report':
-                $this->report();
-            break;
-            case 'createDialog':
-                $this->createDialog();
-            break;
-
+    {//вызывать метод из названия
+        //echo $url_data;
+        try{
+            $this->$url_data();
+        }
+        catch(Throwable $url_data){
+            Jsons::jsonOutput(false, 'method', 'unknown method called');
         }
     }
 
@@ -73,17 +31,19 @@ class Post extends DBconnect
                     $result['token'] = $token;
                    $query = mysqli_query($this->connect(), "INSERT INTO `token`(`uid`, `token`) VALUES ('$id', '$token')");
                    if($query == true){
-                    //mysqli_query($this->connect(), "UPDATE `users` SET `status`= 'online', `last_activity` = '0000-00-00 00:00:00' WHERE `id` = '$id'");
+                      $date = date("Y-m-d H:i:s");
+                   mysqli_query($this->connect(), "UPDATE `users` SET `status`= 'online', `last_activity` = '$date' WHERE `id` = '$id'");
+                  //$this->setOnline();
                     unset($result['password']);
                     unset($result['last_activity']);
                     unset($result['status']);
-                   
+
                     Jsons::jsonOutput(true, $result);
                    }else{
-                    Jsons::jsonOutput(false, "unauth", "prikol");  
+                    Jsons::jsonOutput(false, "unauth", "prikol");
                    }
-                   
-                   
+
+
                 }else{
                     unset($result);
                     Jsons::jsonOutput(false, 'password', 'wrong password');
@@ -104,7 +64,7 @@ class Post extends DBconnect
         if(!empty($login) and !empty($pass) and !empty($nick))
         {
             if($this->loginfound($login) == true){
-                $query = mysqli_query($this->connect(), "INSERT INTO `users`(`login`, `nick`, `password`, `photo`, `status`, `role`) 
+                $query = mysqli_query($this->connect(), "INSERT INTO `users`(`login`, `nick`, `password`, `photo`, `status`, `role`)
                 VALUES ('$login','$nick','$pass','http://api.messenger.com/files/images/standart.jpg','offline','user')");
                 if($query == true){
                     Jsons::jsonOutput(true ,"login", "register");
@@ -186,13 +146,13 @@ class Post extends DBconnect
 
     function changePhoto()
     {
-        
+
     }
 
     function name()
     {
     }
-    
+
     function loginfound($login = null)
     {
         if($login != null){
@@ -249,7 +209,7 @@ class Post extends DBconnect
         if($result = Gets::checkToken()){
             $uid = $result['uid'];
             $token = $result['token'];
-            $query = mysqli_query($this->connect(), "UPDATE `token` SET `token`= 'logout' 
+            $query = mysqli_query($this->connect(), "UPDATE `token` SET `token`= 'logout'
             WHERE `uid` = '$uid' AND `token` != '$token'");
             if($query == true){
                 Jsons::jsonOutput(true, 'login', "logout other");
@@ -290,17 +250,17 @@ class Post extends DBconnect
     }
     /**
      * Загрузка фото, идет проверка по хэшу, если есть в базе то просто вывдает ссылку, иначе
-     * загружает 
+     * загружает
      */
     /**
      * ПЕРЕДЕЛАТЬ НАХУЙ СРОЧНО!!!!!!
      */
     function uploadFile()
-    {         
+    {
         if($result = Gets::checkToken()){
             $uid = $result['uid'];
             $uploaddir = 'files/images/';
-            $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);    
+            $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
             $file = uniqid('',true).'.'.explode('.', $uploadfile)[1];
             $sha = hash_file("sha256", $_FILES['userfile']['tmp_name']);
             $query = mysqli_query($this->connect(), "SELECT * FROM `files` WHERE `hash_sum` = '$sha'");
@@ -314,7 +274,7 @@ class Post extends DBconnect
                 if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir.$file)) {
                     $path = 'http://'.$_SERVER['SERVER_NAME'].'/'.$uploaddir.$file;
                     $date = date("Y-m-d H:i:s");
-                    mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`) 
+                    mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`)
                     VALUES ('$file','$path','$uid','$sha', '$date')");
                     $array["name"]=$file;
                     $array["path"]=$path;
@@ -327,14 +287,14 @@ class Post extends DBconnect
     }
 
     function report()
-    { 
+    {
         $message_id = $_POST['message_id'];
         if(!empty($report_id = $_POST['report_user_id']) and !empty($_POST['type_report']) and !empty($_POST['message_id'])){
             if($result = Gets::checkToken()){
                 $reporter = $result['id'];
                 $message = $_POST['message'];
                 $type = $_POST['type_report'];
-                if(mysqli_query($this->connect(), "INSERT INTO `report`(`report_user_id`, `reported_user_id`, `message`, `type_report`, `message_id`) 
+                if(mysqli_query($this->connect(), "INSERT INTO `report`(`report_user_id`, `reported_user_id`, `message`, `type_report`, `message_id`)
                 VALUES ('$report_id','$reporter','$message','$type', '$message_id')") == true){
                     $array["report_user_id"]=$report_id;
                     $array["reporter"] = $reporter;
@@ -342,7 +302,7 @@ class Post extends DBconnect
                     $array["message_id"]=$message_id;
                     $array["type"]=$type;
                     Jsons::jsonOutput(true, $array);
-                }     
+                }
             }else{
                 Jsons::jsonOutput(false, 'token', 'unauth');
             }
@@ -351,7 +311,7 @@ class Post extends DBconnect
             empty($_POST['type_report']) ? $err['type_report'] = "empty" : $_POST['type_report'];
             empty($_POST['message_id']) ? $err['message_id'] = "empty" : $_POST['message_id'];
             Jsons::jsonOutput(false, $err);
-        }    
+        }
 
     }
 
@@ -395,18 +355,18 @@ class Post extends DBconnect
 
     /**
      * добавить проверку на существующих диалогов
-     * 
+     *
      */
     function createDialog()
     {
         if($result = Gets::checkToken()){
-            $get_user_id = $_POST['get_user_id'];
+            $get_user_id = $_POST['user_id'];
             $id = $result['id'];
             if(!empty($get_user_id)){
                 $query = mysqli_query($this->connect(), "SELECT * FROM `users` WHERE `id` = '$get_user_id'");
                 if(mysqli_num_rows($query) == 1){
                     $date = date("Y-m-d H:i:s");
-                    $query = mysqli_query($this->connect(), "INSERT INTO `dialog`(`one_user_id`, `two_user_id`, `time_create`) 
+                    $query = mysqli_query($this->connect(), "INSERT INTO `dialog`(`one_user_id`, `two_user_id`, `time_create`)
                     VALUES ('$id','$get_user_id','$date')");
                     if($query == true){
                         Jsons::jsonOutput(true, "dialog", "created");
