@@ -1,5 +1,6 @@
 <?php
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: *");
 header("Content-type: application/json; charset: utf-8");
 set_include_path(get_include_path().'/');
 spl_autoload_extensions('.php');
@@ -14,5 +15,6 @@ if (password_verify('test', $hash)) {
 
 
 //Jsons::jsonOutput(true, "test1, test2, test3","value1, value2, value 3");
+
 ?>
 
