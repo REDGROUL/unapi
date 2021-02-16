@@ -2,8 +2,7 @@
 class Post extends DBconnect
 {
     function getContent($url_data)
-    {//вызывать метод из названия
-        //echo $url_data;
+    {
         try{
             $this->$url_data();
         }
@@ -29,21 +28,17 @@ class Post extends DBconnect
                 if(password_verify($pass,$password_hash)){
                     $token = hash("sha256", uniqid('', true));
                     $result['token'] = $token;
-                   $query = mysqli_query($this->connect(), "INSERT INTO `token`(`uid`, `token`) VALUES ('$id', '$token')");
-                   if($query == true){
-                      $date = date("Y-m-d H:i:s");
-                   mysqli_query($this->connect(), "UPDATE `users` SET `status`= 'online', `last_activity` = '$date' WHERE `id` = '$id'");
-                  //$this->setOnline();
-                    unset($result['password']);
-                    unset($result['last_activity']);
-                    unset($result['status']);
-
-                    Jsons::jsonOutput(true, $result);
+                    $query = mysqli_query($this->connect(), "INSERT INTO `token`(`uid`, `token`) VALUES ('$id', '$token')");
+                    if($query == true){
+                        $date = date("Y-m-d H:i:s");
+                        mysqli_query($this->connect(), "UPDATE `users` SET `status`= 'online', `last_activity` = '$date' WHERE `id` = '$id'");
+                        unset($result['password']);
+                        unset($result['last_activity']);
+                        unset($result['status']);
+                        Jsons::jsonOutput(true, $result);
                    }else{
-                    Jsons::jsonOutput(false, "unauth", "prikol");
+                        Jsons::jsonOutput(false, "unauth", "prikol");
                    }
-
-
                 }else{
                     unset($result);
                     Jsons::jsonOutput(false, 'password', 'wrong password');
@@ -194,10 +189,11 @@ class Post extends DBconnect
         if($result = Gets::checkToken()){
             $id = $result['uid'];
             $token = $result['token'];
-            if($this->setOffline()){
+            $date = date("Y-m-d H:i:s");
                 mysqli_query($this->connect(),"UPDATE `token` SET `token` = 'logout' WHERE `uid` = '$id' AND `token` = '$token'");
+                mysqli_query($this->connect(), "UPDATE `users` SET `status`= 'offline',`last_activity`= '$date' WHERE `id` = '$id'");
                 Jsons::jsonOutput(true, 'login', 'logout');
-            }
+            
         }else{
             Jsons::jsonOutput(false, 'login', 'unauth');
         }
@@ -378,7 +374,6 @@ class Post extends DBconnect
             }
         }else{
             Jsons::jsonOutput(false, "dialog", "created");
-
         }
     }
 
