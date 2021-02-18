@@ -120,33 +120,53 @@ class Post extends DBconnect
 
     function changeNick()
     {
-    $new_nick = $_POST['nick'];
-    empty($new_nick) ? $error['nick'] = "empty" : $_POST['nick'];
-    if($result = Gets::checkToken()){
-        if(!empty($new_nick)){
-            $login = $result['login'];
+        $new_nick = $_POST['nick'];
+        empty($new_nick) ? $error['nick'] = "empty" : $_POST['nick'];
+        if($result = Gets::checkToken()){
             if(!empty($new_nick)){
-                if($this->loginfound($new_nick) == true){
-                    mysqli_query($this->connect(), "UPDATE `users` SET `nick`= '$new_nick' WHERE `login` = '$login'");
-                    Jsons::jsonOutput(true, "nick change");
+                $login = $result['login'];
+                if(!empty($new_nick)){
+                    if($this->loginfound($new_nick) == true){
+                        mysqli_query($this->connect(), "UPDATE `users` SET `nick`= '$new_nick' WHERE `login` = '$login'");
+                        Jsons::jsonOutput(true, "nick change");
+                    }
                 }
+            }else{
+                Jsons::jsonOutput(false, 'nick', 'empty');
             }
         }else{
-            Jsons::jsonOutput(false, 'nick', 'empty');
+            Jsons::jsonOutput(false, 'token', 'unauth');
         }
-    }else{
-        Jsons::jsonOutput(false, 'token', 'unauth');
     }
-    }
+
 
     function changePhoto()
     {
+        if($result = Gets::checkToken()){
+            $uid = $result['uid'];
+            $uploaddir = 'files/images/';
+            $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
+            $file = uniqid('',true).'.'.explode('.', $uploadfile)[1];
+            $sha = hash_file("sha256", $_FILES['userfile']['tmp_name']);
+            if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir.$file)) {
+                    $path = 'http://'.$_SERVER['SERVER_NAME'].'/'.$uploaddir.$file;
+                    $date = date("Y-m-d H:i:s");
+                    mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`)
+                    VALUES ('$file','$path','$uid','$sha', '$date')");
+                    mysqli_query($this->connect(), "UPDATE `users` SET `photo` = '$path' WHERE `id` = '$uid'");
+                    $array["name"]=$file;
+                    $array["path"]=$path;
+                    Jsons::jsonOutput(true, $array);
+                } else {
+                    Jsons::jsonOutput(false,'photo', 'some error push form-data to redgroul');
+                }
+            
+        }else{
+            Jsons::jsonOutput(false,"");
+        }
 
     }
 
-    function name()
-    {
-    }
 
     function loginfound($login = null)
     {
@@ -160,10 +180,6 @@ class Post extends DBconnect
         }else {
             $login = $_POST['login'];
         }
-    }
-
-    function photo()
-    {
     }
 
     /**
@@ -255,7 +271,18 @@ class Post extends DBconnect
     {
         if($result = Gets::checkToken()){
             $uid = $result['uid'];
-            $uploaddir = 'files/images/';
+            $type_file = explode('.',$_FILES['userfile']['name']);
+            if(end($type_file) == 'jpg' or end($type_file) == 'jpeg' or end($type_file) == 'png');
+            {
+                $uploaddir = 'files/images/';
+            }
+
+            if(end($type_file) == 'mp3')
+            {
+                $uploaddir = 'files/sounds/';
+            }else{
+                $uploaddir = 'files/other/';
+            }
             $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
             $file = uniqid('',true).'.'.explode('.', $uploadfile)[1];
             $sha = hash_file("sha256", $_FILES['userfile']['tmp_name']);
@@ -284,7 +311,7 @@ class Post extends DBconnect
 
     function report()
     {
-        $message_id = $_POST['message_id'];
+      /*  $message_id = $_POST['message_id'];
         if(!empty($report_id = $_POST['report_user_id']) and !empty($_POST['type_report']) and !empty($_POST['message_id'])){
             if($result = Gets::checkToken()){
                 $reporter = $result['id'];
@@ -307,7 +334,7 @@ class Post extends DBconnect
             empty($_POST['type_report']) ? $err['type_report'] = "empty" : $_POST['type_report'];
             empty($_POST['message_id']) ? $err['message_id'] = "empty" : $_POST['message_id'];
             Jsons::jsonOutput(false, $err);
-        }
+        }*/
 
     }
 
@@ -348,11 +375,6 @@ class Post extends DBconnect
         }
     }
 
-
-    /**
-     * добавить проверку на существующих диалогов
-     *
-     */
     function createDialog()
     {
         if($result = Gets::checkToken()){
@@ -362,26 +384,25 @@ class Post extends DBconnect
                 $query = mysqli_query($this->connect(), "SELECT * FROM `users` WHERE `id` = '$get_user_id'");
                 if(mysqli_num_rows($query) == 1){
                     $date = date("Y-m-d H:i:s");
-                    $query = mysqli_query($this->connect(), "INSERT INTO `dialog`(`one_user_id`, `two_user_id`, `time_create`)
-                    VALUES ('$id','$get_user_id','$date')");
-                    if($query == true){
-                        Jsons::jsonOutput(true, "dialog", "created");
+                    $check_dialog = mysqli_query($this->connect(), "SELECT * FROM `dialog` WHERE `one_user_id` = '$id' AND `two_user_id` = '$get_user_id' or `two_user_id` = '$id' AND `one_user_id` = '$get_user_id'");
+                    if(mysqli_num_rows($check_dialog)>0){
+                        $data = mysqli_fetch_assoc($check_dialog);
+                        Jsons::jsonOutput(false, $data);
+                    }else{
+                        $query = mysqli_query($this->connect(), "INSERT INTO `dialog`(`one_user_id`, `two_user_id`, `time_create`)
+                        VALUES ('$id','$get_user_id','$date')");
+                        if($query == true){
+                            Jsons::jsonOutput(true, "dialog", "created");
+                        }
                     }
-                }else{
-                    Jsons::jsonOutput(false, "dialog", "created");
 
+                }else{
+                    Jsons::jsonOutput(false, "dialog", "user not found");
                 }
             }
         }else{
-            Jsons::jsonOutput(false, "dialog", "created");
+            Jsons::jsonOutput(false, "auth", "uauth");
         }
-    }
-
-    function AgressivePush()
-    {
-    }
-
-    function setRuleAgressPush()
-    {
+    
     }
 }

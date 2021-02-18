@@ -2,7 +2,6 @@
 
 class Get extends DBconnect
 {
-
     function getContent($url_data)
     {
         try{
@@ -13,7 +12,6 @@ class Get extends DBconnect
         }
       
     }
-
 
     function getInfo()
     {
@@ -58,12 +56,31 @@ class Get extends DBconnect
     function getDialogs()
     {
         if($result = Gets::checkToken()){
-
             $uid = $result['uid'];
             $query = mysqli_query($this->connect(), "SELECT * FROM `dialog` WHERE `one_user_id` = '$uid' OR `two_user_id` = '$uid'");
-            while($row=mysqli_fetch_assoc($query)){                    
-               $data[] = $row;
+            while($row=mysqli_fetch_assoc($query)){
+                if($row['one_user_id'] == $uid){
+                    unset($row['one_user_id']);
+                    $id = $row['two_user_id'];
+                    $qry = mysqli_query($this->connect(), "SELECT * FROM `users` WHERE `id` = '$id' ");
+                    $tmp = mysqli_fetch_assoc($qry);
+                    $row['secnod_user'] = $id;
+                    $row['photo'] = $tmp['photo'];
+                    $row['nick'] = $tmp['nick'];
+                    unset($row['two_user_id']);
+                }else{
+                    unset($row['two_user_id']);
+                    $id = $row['one_user_id'];
+                    $qry = mysqli_query($this->connect(), "SELECT * FROM `users` WHERE `id` = '$id' ");
+                    $tmp = mysqli_fetch_assoc($qry);
+                    $row['secnod_user'] = $id;
+                    $row['photo'] = $tmp['photo'];
+                    $row['nick'] = $tmp['nick'];
+                    unset($row['one_user_id']);
+                }
+                $data[] = $row;
             }
+            
             Jsons::jsonOutput(true, $data);
         }else{
             Jsons::jsonOutput(false, 'login','unauth');
@@ -72,16 +89,18 @@ class Get extends DBconnect
 
     function getMessage()
     {
+
         if(Gets::checkToken()){
             $url = $_SERVER['REQUEST_URI'];
             $dialog_id = explode('/', $url)[2];
             $date = date("2021-02-06");
             if(!empty($dialog_id)){
-                $query = mysqli_query($this->connect(), "SELECT * FROM `messages` WHERE `dialog_id` = '$dialog_id' AND DATE(data_send) = '$date'");
+                $query = mysqli_query($this->connect(), "SELECT * FROM `messages` WHERE `dialog_id` = '$dialog_id'");
                 if($query == true){
                     while($row=mysqli_fetch_assoc($query)){                    
                         $data[] = $row;
                     }
+                    
                     if(!empty($data)){
                         Jsons::jsonOutput(true, $data);
                     }else{
@@ -119,6 +138,35 @@ class Get extends DBconnect
             }
         }else{
             Jsons::jsonOutput(false, 'login', 'unauth');
+        }
+    }
+
+    function checkAuth()
+    {
+        if(Gets::checkToken()){
+            Jsons::jsonOutput(true, 'auth', 'ok');
+        }else{
+            Jsons::jsonOutput(false, 'auth', 'unauth');
+        }
+    }
+
+    function userSearch()
+    {
+
+        if(Gets::checkToken()){
+            $url = $_SERVER['REQUEST_URI'];
+            $name = explode('/', $url)[2];
+            $query = mysqli_query($this->connect(), "SELECT * FROM `users` WHERE `nick` LIKE '%$name%'");
+            if($query == true){
+                while($row = mysqli_fetch_assoc($query)){
+                    $data[] = $row;
+                }
+                unset($result['password']);
+                unset($result['last_activity']);
+                unset($result['status']);
+                Jsons::jsonOutput(true, $data);
+            }
+            
         }
     }
 
