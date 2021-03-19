@@ -1,4 +1,5 @@
 <?php
+
 class Post extends DBconnect
 {
     function getContent($url_data)
@@ -149,18 +150,17 @@ class Post extends DBconnect
             $file = uniqid('',true).'.'.explode('.', $uploadfile)[1];
             $sha = hash_file("sha256", $_FILES['userfile']['tmp_name']);
             if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir.$file)) {
-                    $path = 'http://'.$_SERVER['SERVER_NAME'].'/'.$uploaddir.$file;
-                    $date = date("Y-m-d H:i:s");
-                    mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`)
-                    VALUES ('$file','$path','$uid','$sha', '$date')");
-                    mysqli_query($this->connect(), "UPDATE `users` SET `photo` = '$path' WHERE `id` = '$uid'");
-                    $array["name"]=$file;
-                    $array["path"]=$path;
-                    Jsons::jsonOutput(true, $array);
+                $path = 'http://'.$_SERVER['SERVER_NAME'].'/'.$uploaddir.$file;
+                $date = date("Y-m-d H:i:s");
+                mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`)
+                VALUES ('$file','$path','$uid','$sha', '$date')");
+                mysqli_query($this->connect(), "UPDATE `users` SET `photo` = '$path' WHERE `id` = '$uid'");
+                $array["name"]=$file;
+                $array["path"]=$path;
+                Jsons::jsonOutput(true, $array);
                 } else {
                     Jsons::jsonOutput(false,'photo', 'some error push form-data to redgroul');
                 }
-            
         }else{
             Jsons::jsonOutput(false,"");
         }
@@ -270,7 +270,7 @@ class Post extends DBconnect
     function uploadFile()
     {
         if($result = Gets::checkToken()){
-            $uid = $result['uid'];
+          /*  $uid = $result['uid'];
             $type_file = explode('.',$_FILES['userfile']['name']);
             if(end($type_file) == 'jpg' or end($type_file) == 'jpeg' or end($type_file) == 'png');
             {
@@ -305,13 +305,13 @@ class Post extends DBconnect
                 } else {
                     Jsons::jsonOutput(false,"");
                 }
-            }
+            }*/
         }
     }
 
     function report()
     {
-      /*  $message_id = $_POST['message_id'];
+        $message_id = $_POST['message_id'];
         if(!empty($report_id = $_POST['report_user_id']) and !empty($_POST['type_report']) and !empty($_POST['message_id'])){
             if($result = Gets::checkToken()){
                 $reporter = $result['id'];
@@ -334,7 +334,7 @@ class Post extends DBconnect
             empty($_POST['type_report']) ? $err['type_report'] = "empty" : $_POST['type_report'];
             empty($_POST['message_id']) ? $err['message_id'] = "empty" : $_POST['message_id'];
             Jsons::jsonOutput(false, $err);
-        }*/
+        }
 
     }
 
@@ -405,4 +405,15 @@ class Post extends DBconnect
         }
     
     }
+
+    function createChannel()
+    {
+        if($result = Gets::checkToken())
+        {
+            $channel_name = $_POST['cname'];
+            
+        }
+    }
+
+
 }

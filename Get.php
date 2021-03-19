@@ -170,6 +170,20 @@ class Get extends DBconnect
         }
     }
 
+    function checkCName($cname)
+    {
+        if($result = Gets::checkToken())
+        {
+            $cname_lenght = strlen($cname);
+            if($cname_lenght < 16){
+                $query = mysqli_query($this->connect(), "some query");
+            }else{
+                /**code */
+            }
+
+        }
+    }
+
     function getContacts()
     {
     }
