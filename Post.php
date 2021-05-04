@@ -403,6 +403,37 @@ class Post extends DBconnect
         }else{
             Jsons::jsonOutput(false, "auth", "uauth");
         }
+
+        function createChannel()
+        {
+            if($result = Gets::checkToken())
+            {
+                $creator = $result['id'];
+                $channel_name = $_POST['cname'];
+                $photo = $_POST['photo'];
+                $description = $_POST['description'];
+                $access = $_POST['access'];
+                $link = 'unmess.com/'.$channel_name;
+
+
+                $check_name = mysqli_query($this->connect(), "SELECT `channel_name` FROM `channels` where `channel_name` = '$channel_name'");
+                if(mysqli_num_rows($check_name) == 0){
+                    $add_channel = mysqli_query($this->connect(), "INSERT INTO `channels`(`channel_name`, `photo`, `description`, `access`, `users_count`, `creator`, `content_managers`, `link`) 
+                VALUES ('$channel_name', '$photo', '$description', '$access', '1', '$creator', '', '$link')");
+                    if($add_channel == true){
+                        $array['channel_name'] = $channel_name;
+                        $array['creator'] = $creator;
+                        $array['link'] = $link;
+                        Jsons::jsonOutput(true, $array);
+                    }else{
+                        Jsons::jsonOutput(false, 'error', 'create error');
+                    }
+
+                }else{
+                    Jsons::jsonOutput(false, 'error', 'channel with name: '.$channel_name.' exist!');
+                }
+            }
+        }
     
     }
 }
