@@ -3,9 +3,11 @@ class Post extends DBconnect
 {
     function getContent($url_data)
     {
-        try{
-            $this->$url_data();
-        }
+		//$this->deleteMess();
+        //$this->setChanellPhoto();
+		try{
+			$this->$url_data();
+		}
         catch(Throwable $url_data){
             Jsons::jsonOutput(false, 'method', 'unknown method called');
         }
@@ -60,7 +62,7 @@ class Post extends DBconnect
         {
             if($this->loginfound($login) == true){
                 $query = mysqli_query($this->connect(), "INSERT INTO `users`(`login`, `nick`, `password`, `photo`, `status`, `role`)
-                VALUES ('$login','$nick','$pass','http://api.messenger.com/files/images/standart.jpg','offline','user')");
+                VALUES ('$login','$nick','$pass','files/images/standart.jpg','offline','user')");
                 if($query == true){
                     Jsons::jsonOutput(true ,"login", "register");
                 }else{
@@ -70,7 +72,7 @@ class Post extends DBconnect
                 Jsons::jsonOutput(false,"login", "login exist");
             }
         }else{
-            Jsons::jsonOutput(false,"login", "login empty");
+            Jsons::jsonOutput(false,"login", "data empty");
         }
     }
 
@@ -139,30 +141,24 @@ class Post extends DBconnect
         }
     }
 
-
     function changePhoto()
     {
         if($result = Gets::checkToken()){
             $uid = $result['uid'];
-            $uploaddir = 'files/images/';
-            $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
-            $file = uniqid('',true).'.'.explode('.', $uploadfile)[1];
-            $sha = hash_file("sha256", $_FILES['userfile']['tmp_name']);
-            if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir.$file)) {
-                    $path = 'http://'.$_SERVER['SERVER_NAME'].'/'.$uploaddir.$file;
-                    $date = date("Y-m-d H:i:s");
-                    mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`)
-                    VALUES ('$file','$path','$uid','$sha', '$date')");
-                    mysqli_query($this->connect(), "UPDATE `users` SET `photo` = '$path' WHERE `id` = '$uid'");
-                    $array["name"]=$file;
-                    $array["path"]=$path;
-                    Jsons::jsonOutput(true, $array);
-                } else {
-                    Jsons::jsonOutput(false,'photo', 'some error push form-data to redgroul');
-                }
-            
+            $type_file = explode('.',$_FILES['userfile']['name']);
+            if(end($type_file) == 'jpg' or end($type_file) == 'jpeg' or end($type_file) == 'png')
+            {
+                $file = $this->uploadFile($_FILES,true);
+                $path = $file['path'];
+                mysqli_query($this->connect(), "UPDATE `users` SET `photo` = '$path' WHERE `id` = '$uid'");
+                $array["name"]=$file['name'];
+                $array["path"]=$file['path'];
+                Jsons::jsonOutput(true, $array);
+            }else{
+                Jsons::jsonOutput(false, "err", 'not image');
+            }
         }else{
-            Jsons::jsonOutput(false,"");
+            Jsons::jsonOutput(false,"auth", 'unauth');
         }
 
     }
@@ -260,58 +256,115 @@ class Post extends DBconnect
             return false;
         }
     }
+
     /**
-     * Загрузка фото, идет проверка по хэшу, если есть в базе то просто вывдает ссылку, иначе
-     * загружает
+     * загрузка файлов
+	 * userfile - файл
+	 * type - тип файла (не обязательно)
+     *
      */
-    /**
-     * ПЕРЕДЕЛАТЬ НАХУЙ СРОЧНО!!!!!!
-     */
-    function uploadFile()
+
+    function uploadFile($upfile = null, $silent = null, $type = null)
     {
         if($result = Gets::checkToken()){
             $uid = $result['uid'];
             $type_file = explode('.',$_FILES['userfile']['name']);
-            if(end($type_file) == 'jpg' or end($type_file) == 'jpeg' or end($type_file) == 'png');
+            if(end($type_file) == 'jpg' or end($type_file) == 'jpeg' or end($type_file) == 'png')
             {
                 $uploaddir = 'files/images/';
-            }
+                if($type == null){
+                    $type = 'image';
 
-            if(end($type_file) == 'mp3')
-            {
-                $uploaddir = 'files/sounds/';
+                }
             }else{
-                $uploaddir = 'files/other/';
-            }
-            $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
-            $file = uniqid('',true).'.'.explode('.', $uploadfile)[1];
-            $sha = hash_file("sha256", $_FILES['userfile']['tmp_name']);
-            $query = mysqli_query($this->connect(), "SELECT * FROM `files` WHERE `hash_sum` = '$sha'");
-            if(mysqli_num_rows($query) > 0){
-                $result = mysqli_fetch_assoc($query);
-                $array["name"]=$file;
-                $array["path"]=$result['path'];
-                $array["datatime_upload"]=$result['time_upload'];
-                Jsons::jsonOutput(true, $array);
-            }else{
-                if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir.$file)) {
-                    $path = 'http://'.$_SERVER['SERVER_NAME'].'/'.$uploaddir.$file;
-                    $date = date("Y-m-d H:i:s");
-                    mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`)
-                    VALUES ('$file','$path','$uid','$sha', '$date')");
-                    $array["name"]=$file;
-                    $array["path"]=$path;
-                    Jsons::jsonOutput(true, $array);
-                } else {
-                    Jsons::jsonOutput(false,"");
+                if(end($type_file) == 'mp4')
+                {
+                    $uploaddir = 'files/video/';
+                    if($type == null){
+                    $type = 'video';
+                    }
+                }
+                if(end($type_file) == 'mp3')
+                {
+                    $uploaddir = 'files/sounds/';
+                    if($type == null){
+                    $type = 'music';
+                    }
+                }else{
+                   
+                    $uploaddir = 'files/other/';
+                    if($type == null){
+                    $type = 'file';
+                    }
                 }
             }
+          
+
+                $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
+                $sha = hash_file("sha256", $_FILES['userfile']['tmp_name']);
+
+            $file =md5( base64_encode(microtime(true))).'.'.explode('.', $uploadfile)[1];
+        
+            $query = mysqli_query ($this->connect(), "SELECT * FROM `files` WHERE `hash_sum` = '$sha'");
+            if(mysqli_num_rows($query) == 1){
+                $data = mysqli_fetch_assoc($query);
+                $arr['name'] = $data['name']; 
+                $arr['path'] = $data['path']; 
+                $arr['time'] = $data['time_upload']; 
+                $arr['type'] = $data['type']; 
+                if($silent == true){
+                    return ($arr);
+                }else{
+                    Jsons::jsonOutput(true, $arr);
+                }
+            }else{
+                if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir.$file)) {
+                    $path = $uploaddir.$file;
+                    $name = $_FILES['userfile']['name'];
+                    $date = date("Y-m-d H:i:s");
+                    
+                    mysqli_query($this->connect(),"INSERT INTO `files`(`name`, `path`, `owner_id`, `hash_sum`, `time_upload`, `type`)
+                    VALUES ('$name','$path','$uid','$sha', '$date', '$type')");
+                    $array["name"]=$name;
+                    $array["path"]=$path;
+                    $array["type"]=$type;
+                    if($silent == true){
+                        return ($array);
+                    }else{
+                        Jsons::jsonOutput(true, $array);
+                    }
+                } else {
+                    if($silent != true){
+                        Jsons::jsonOutput(false,'photo', 'some error push form-data to redgroul');
+                       
+                    }
+                   
+                }
+            }
+           
+
+    
+          
         }
     }
 
+    function testupl()
+    {
+       $res = $this->uploadFile($_FILES['userfile']['name'], true, 'soundmess');
+       var_dump($res);
+    }
+
+	/**
+	 * репорт
+	 * report_user_id - id на кого репорт
+	 * message - сообщение
+	 * type - тип :D
+	 *
+	 */
+
     function report()
     {
-      /*  $message_id = $_POST['message_id'];
+      $message_id = $_POST['message_id'];
         if(!empty($report_id = $_POST['report_user_id']) and !empty($_POST['type_report']) and !empty($_POST['message_id'])){
             if($result = Gets::checkToken()){
                 $reporter = $result['id'];
@@ -334,17 +387,25 @@ class Post extends DBconnect
             empty($_POST['type_report']) ? $err['type_report'] = "empty" : $_POST['type_report'];
             empty($_POST['message_id']) ? $err['message_id'] = "empty" : $_POST['message_id'];
             Jsons::jsonOutput(false, $err);
-        }*/
+        }
 
     }
 
-
+	/**
+	 * Отправка сообщений
+	 * sendMessage/dialog_id/second_user_id
+	 * message - сообщение
+	 * message_file - файл для сообщения
+	 * type - тип файла (не обязательно)
+	 */
 
     function sendMessage()
     {
         $url = $_SERVER['REQUEST_URI'];
         $dialog_id = explode('/', $url)[2];
         $get_user_id = explode('/', $url)[3];
+
+        $type = $_POST['type'];
         if($result = Gets::checkToken()){
             $id = $result['id'];
             empty($dialog_id) ? $error['dialog_id'] = "empty" : $dialog_id;
@@ -355,11 +416,19 @@ class Post extends DBconnect
             if($query == true){
                 $result = mysqli_fetch_assoc($query);
                 if($get_user_id == $result['one_user_id'] and $get_user_id != $id or $get_user_id == $result['two_user_id'] and $get_user_id != $id){
-                    if(!empty($message)){
-                        $query = mysqli_query($this->connect(), "INSERT INTO `messages`(`dialog_id`, `message_text`, `sender`, `getter`, `data_send`, `is_read`, `visible_one`, `visible_two`)
-                        VALUES ('$dialog_id','$message', '$id', '$get_user_id','$date','0','1','1')");
+                    if(!empty($message) or !empty($_FILES)){
+                        if(!empty($_FILES)){
+                         $file = @$this->uploadFile($_FILES,true, $type);
+                         
+                         $uploadedfile = $file['path'];
+                        // echo $uploadedfile;
+                         $type = trim($file['type']);
+                        }
+                       $query = mysqli_query($this->connect(), "INSERT INTO `messages`(`dialog_id`, `message_text`,`message_file`,`type`, `sender`, `getter`, `data_send`, `is_read`, `visible_one`, `visible_two`)
+                        VALUES ('$dialog_id','$message', '$uploadedfile','$type', '$id', '$get_user_id','$date','0','1','1')");
                         if($query == true){
-                            Jsons::jsonOutput(true, "message, get_user, date_send", "'$message', '$get_user_id','$date'");
+                             
+                            Jsons::jsonOutput(true, "message, get_user, date_send, file, type_file", "'$message','$get_user_id','$date', '$uploadedfile',$type");
                         }
                     }else{
                         Jsons::jsonOutput(false, 'message', 'empty');
@@ -399,31 +468,58 @@ class Post extends DBconnect
                 }else{
                     Jsons::jsonOutput(false, "dialog", "user not found");
                 }
+            }else{
+                Jsons::jsonOutput(false, "error", "error");
             }
         }else{
             Jsons::jsonOutput(false, "auth", "uauth");
         }
 
-        function createChannel()
+
+
+    }
+
+	/**
+	 *
+	 * Создание канала
+	 * cname - имя
+	 * description - описание
+	 * userfile - картинка
+	 *
+	 */
+    function createChannel()
+    {
+        if($result = Gets::checkToken())
         {
-            if($result = Gets::checkToken())
-            {
-                $creator = $result['id'];
-                $channel_name = $_POST['cname'];
-                $photo = $_POST['photo'];
-                $description = $_POST['description'];
-                $access = $_POST['access'];
-                $link = 'unmess.com/'.$channel_name;
-
-
-                $check_name = mysqli_query($this->connect(), "SELECT `channel_name` FROM `channels` where `channel_name` = '$channel_name'");
+            $creator = $result['id'];
+            $channel_name = $_POST['cname'];
+            
+            $description = $_POST['description'];
+            $access = $_POST['access'];
+            $link = 'unmess.com/'.$channel_name;
+            if(!empty($channel_name)){
+            $check_name = mysqli_query($this->connect(), "SELECT `channel_name` FROM `channels` where `channel_name` = '$channel_name'");
                 if(mysqli_num_rows($check_name) == 0){
+                    if(!empty($_FILES)){
+                        $type_file = explode('.',$_FILES['userfile']['name']);
+                        if(end($type_file) == 'jpg' or end($type_file) == 'jpeg' or end($type_file) == 'png')
+                        {
+                         $file = $this->uploadFile($_FILES,true, $type);
+                         $uploadedfile = $file['path'];
+                        }
+                        
+                    }
                     $add_channel = mysqli_query($this->connect(), "INSERT INTO `channels`(`channel_name`, `photo`, `description`, `access`, `users_count`, `creator`, `content_managers`, `link`) 
-                VALUES ('$channel_name', '$photo', '$description', '$access', '1', '$creator', '', '$link')");
+                        VALUES ('$channel_name', '$uploadedfile', '$description', '$access', '1', '$creator', '', '$link')");
                     if($add_channel == true){
+
+                        $get_chanell_id = mysqli_query($this->connect(), "SELECT * FROM `channels` WHERE `channel_name` = '$channel_name' AND `creator` = '$creator' AND `link` = '$link'");
+                        $id = mysqli_fetch_assoc($get_chanell_id)['id'];
+                        $array['id'] = $id;
                         $array['channel_name'] = $channel_name;
                         $array['creator'] = $creator;
                         $array['link'] = $link;
+                        mysqli_query($this->connect(), "INSERT INTO `chanell_subs`(`uid`, `channel_name`, `channel_id`) VALUES ('$creator', '$channel_name', '$id')");
                         Jsons::jsonOutput(true, $array);
                     }else{
                         Jsons::jsonOutput(false, 'error', 'create error');
@@ -432,8 +528,245 @@ class Post extends DBconnect
                 }else{
                     Jsons::jsonOutput(false, 'error', 'channel with name: '.$channel_name.' exist!');
                 }
+            }else{
+                Jsons::jsonOutput(false, 'error', 'no chanell name');
+
+            }
+        }else{
+            Jsons::jsonOutput(false, 'error', 'auth');
+
+        }
+    }
+
+	/**
+	 * Изменение картинка канала
+	 *	/setChanellPhoto/id_канала
+	 * userfile - картинка
+	 *
+	 */
+    function setChanellPhoto()
+    {
+        if($res = Gets::checkToken()){
+            $uid = $res['id'];
+            $url = $_SERVER['REQUEST_URI'];
+            $chanell_id = explode('/', $url)[2];
+            $type_file = explode('.',$_FILES['userfile']['name']);
+            if(end($type_file) == 'jpg' or end($type_file) == 'jpeg' or end($type_file) == 'png')
+            {
+                $file = $this->uploadFile($_FILES,true);
+                $path = $file['path'];
+               $query = mysqli_query($this->connect(), "UPDATE `channels` SET `photo` = '$path' WHERE `id` = '$chanell_id' AND `creator` = '$uid'");
+               if($query == true){
+                   $array["name"]=$file['name'];
+                   $array["path"]=$file['path'];
+                   Jsons::jsonOutput(true, $array);
+               }else{
+                   Jsons::jsonOutput(false, "err", 'some error');
+
+               }
+            }else{
+                Jsons::jsonOutput(false, "err", 'not image');
+            }
+
+        }
+    }
+
+	/**
+	 *
+	 * изменение данных канала
+	 * 	changeDataChannel/id канала
+	 * 	cname- имя
+	 * description - описание
+	 *
+	 */
+    function changeDataChannel()
+    {
+        if($res = Gets::checkToken())
+        {
+            $uid = $res['id'];
+            $url = $_SERVER['REQUEST_URI'];
+            $chanell_id = explode('/', $url)[2];
+
+            if(!empty($chanell_id)){
+                $cname = $_POST['cname'];
+                $desc = $_POST['description'];
+                $query = mysqli_query($this->connect(), "UPDATE `channels` SET `channel_name` = '$cname', `description`='$desc' WHERE `id` = '$chanell_id'");
+                if($query == true){
+                    Jsons::jsonOutput(true, 'result', 'data update');
+
+                }else{
+                    Jsons::jsonOutput(false, 'err', 'sql err');
+                }
+            }else{
+                Jsons::jsonOutput(false, 'data', 'data id empty');
+            }
+            
+        }
+    }
+    /**
+    * messageChannel/id_c
+    *message - имя
+    *userfile - файл
+    * type - тип
+    */
+    function messageChannel()
+    {
+        if($res = Gets::checkToken()){
+            $uid = $res['id'];
+            $url = $_SERVER['REQUEST_URI'];
+            $type = $_POST['type'];
+            $chanell_id = explode('/', $url)[2];
+            $query1 = mysqli_query($this->connect(), "SELECT * FROM `channels` WHERE `creator` = '$uid' AND `id` = '$chanell_id'");
+            if(mysqli_num_rows($query1) > 0){
+                $message = $_POST['message'];
+                if(!empty($_FILES)){
+                    $file = $this->uploadFile($_FILES,true , $type);
+                    $path = $file['path'];
+
+                }
+                $name_f = $file['name'];
+                $type_f = $file['type'];
+                $query = mysqli_query($this->connect(), "INSERT INTO `channell_messages`(`id_channel`, `message`, `file`, `file_name`, `file_type`) 
+                VALUES ('$chanell_id','$message','$path','$name_f','$type_f')");
+                if($query == true){
+                    Jsons::jsonOutput(true, "data", 'ok');
+                }else{
+                    echo $chanell_id;
+                    echo $message;
+                    echo $path;
+                    echo $type_f;
+                    Jsons::jsonOutput(true, "data", 'err');
+                }
+            }else{
+                Jsons::jsonOutput(false, "err", "chanell not found or you don't have premissions");
             }
         }
-    
     }
+    /**
+    * подписка
+    * sub/id_chan;
+    *
+    *
+    */
+    function sub(){
+        if($res = Gets::checkToken()){
+            $uid = $res['id'];
+            $url = $_SERVER['REQUEST_URI'];
+            $type = $_POST['type'];
+            $chanell_id = explode('/', $url)[2];
+
+            $query1 = mysqli_query($this->connect(), "SELECT * FROM `channels` WHERE `id` = '$chanell_id'");
+            $tmp = mysqli_fetch_assoc($query1);
+            $nc = $tmp['channel_name'];
+            if(mysqli_num_rows($query1)>0){
+                $query2 = mysqli_query($this->connect(), "SELECT * FROM `chanell_subs` WHERE `uid` = '$uid' AND `channel_id` = '$chanell_id'");
+                if(mysqli_num_rows($query2) == 0){
+                   $qur = mysqli_query($this->connect(), "INSERT INTO `chanell_subs`( `uid`, `channel_name`, `channel_id`) VALUES ('$uid', '$nc', '$chanell_id')");
+                    if($qur == true){
+                        Jsons::jsonOutput(true, "sub", 'ok');
+                    }else{
+                        echo $chanell_id;
+                    }
+                }else{
+                    Jsons::jsonOutput(false, "sub", 'no need');
+                }
+            }else{
+                Jsons::jsonOutput(false, "sub", 'not found');
+            }
+        }
+    }
+
+    function deleteAllMess()
+	{
+		if($res = Gets::checkToken()){
+			$uid = $res['id'];
+			$url = $_SERVER['REQUEST_URI'];
+			$dialog_id = explode('/', $url)[2];
+			if(!empty($dialog_id)){
+				$query = mysqli_query($this->connect(), "SELECT * FROM `dialog` WHERE `dialog_id` = '$dialog_id'");
+				if(mysqli_num_rows($query) == 1){
+					$del = mysqli_query($this->connect(), "DELETE FROM `messages` WHERE `dialog_id` = '$dialog_id'");
+					if($del == true){
+						Jsons::jsonOutput(true, 'dialog', 'delete');
+					}
+				}else{
+					Jsons::jsonOutput(false, 'dialog','not found or no mess');
+				}
+			}
+		}
+	}
+
+
+
+    function createConvers()
+	{
+		if(Gets::checkToken())
+		{
+			$name = $_POST['cname'];
+			$description = $_POST['description'];
+
+			if(!empty($name)){
+				if(!empty($_FILES)){
+					$file = $this->uploadFile($_FILES,true);
+					$path = $file['path'];
+				}
+				$qur = mysqli_query($this->connect(), "INSERT INTO ` conversation_dialogs`(`name`, `description`, `count_users`, `photo`)
+										VALUES ('$name','$description','1','$path')");
+				if($qur == true){
+					Jsons::jsonOutput(true, 'create convers', 'create');
+				}
+			}
+
+
+		}
+	}
+
+
+
+	function deleteMess()
+	{
+		if($res = Gets::checkToken()){
+			$uid = $res['id'];
+			$url = $_SERVER['REQUEST_URI'];
+		//	$dialog_id = explode('/', $url)[2];
+			$mess_id = explode('/', $url)[2];
+
+			$found = mysqli_query($this->connect(), "SELECT * FROM `messages` WHERE  `message_id` = '$mess_id'");
+			if(mysqli_num_rows($found) == 1){
+				$del = mysqli_query($this->connect(), "DELETE FROM `messages` WHERE  `message_id` = '$mess_id'");
+				if($del == true){
+					Jsons::jsonOutput(true, 'mess', 'delete');
+				}
+			}else{
+				Jsons::jsonOutput(false, 'mess', 'not found');
+			}
+		}
+	}
+
+	function editMess()
+	{
+		if($res = Gets::checkToken()){
+			print_r($uid = $res['id']);
+			$url = $_SERVER['REQUEST_URI'];
+		//	$dialog_id = explode('/', $url)[2];
+			$mess_id = explode('/', $url)[2];
+			$new_mess = $_POST['message'];
+
+			if(!empty($new_mess)){
+				$found = mysqli_query($this->connect(), "SELECT * FROM `messages` WHERE  `message_id` = '$mess_id'");
+				if(mysqli_num_rows($found) == 1){
+					$del = mysqli_query($this->connect(), "UPDATE `messages` SET `message_text` = '$new_mess' WHERE `message_id` = '$mess_id'");
+					if($del == true){
+						Jsons::jsonOutput(true, 'mess', 'update');
+					}else{
+						Jsons::jsonOutput(true, 'mess', 'err');
+
+                    }
+				}else{
+					Jsons::jsonOutput(false, 'mess', 'not found');
+				}
+			}
+
+		}
+	}
 }

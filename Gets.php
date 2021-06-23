@@ -27,9 +27,10 @@ class Gets
         $token = Self::getToken();
         $query = mysqli_query($db ->connect(), "SELECT * FROM `token` INNER JOIN `users` ON token.uid = users.id WHERE `token` = '$token'");
         if(mysqli_num_rows($query) == 1){
-             return mysqli_fetch_assoc($query);
+
+            return mysqli_fetch_assoc($query);
         }else{
-            return false;
+
         }
     }
 

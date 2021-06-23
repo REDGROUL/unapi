@@ -7,7 +7,6 @@ class Router
         $method = $_SERVER['REQUEST_METHOD'];
         $url = $_SERVER['REQUEST_URI'];
         $url_data = explode('/', $url); //str_replace
-        //заменить на if
         switch($method)
         {
             case "POST":
